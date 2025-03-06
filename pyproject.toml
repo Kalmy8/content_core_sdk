@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "content_core_sdk"
+version = "0.1.0"
+description = "Shared SDK for Content Core Microservices"
+authors = [{name = "Aleksei Kalmykov", email = "a.kalmykov@entangle.fi"}]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+    "aiokafka>=0.12.0",
+    "python-dotenv>=1.0.0"
+]
