@@ -20,9 +20,10 @@ class _KafkaService:
             topic,
             bootstrap_servers=self.config.bootstrap_servers,
             group_id=group_id,
-            enable_auto_commit=False,
+            enable_auto_commit=True,
+            auto_offset_reset="earliest",
         )
-        self._consumers[(group_id, topic)] = consumer
+        self._consumers[(topic, group_id)] = consumer
         await consumer.start()
 
     async def consume_messages(
