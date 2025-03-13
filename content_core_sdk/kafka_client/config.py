@@ -22,7 +22,7 @@ class KafkaConfig:
     # Producer settings
     producer_acks: str = "all"  # '0', '1', or 'all'
     producer_compression_type: Optional[str] = None  # 'gzip', 'snappy', 'lz4', or None
-    producer_batch_size: int = 16384
+    producer_max_batch_size: int = 16384
     producer_linger_ms: int = 0
     producer_enable_idempotence: bool = False
     
@@ -44,7 +44,7 @@ class KafkaConfig:
         - KAFKA_CONSUMER_HEARTBEAT_INTERVAL_MS: Optional, default 3000
         - KAFKA_PRODUCER_ACKS: Optional, default 'all'
         - KAFKA_PRODUCER_COMPRESSION_TYPE: Optional, default None
-        - KAFKA_PRODUCER_BATCH_SIZE: Optional, default 16384
+        - KAFKA_PRODUCER_MAX_BATCH_SIZE: Optional, default 16384
         - KAFKA_PRODUCER_LINGER_MS: Optional, default 0
         - KAFKA_PRODUCER_ENABLE_IDEMPOTENCE: Optional, default 'false'
         - KAFKA_REQUEST_TIMEOUT_MS: Optional, default 40000
@@ -93,7 +93,7 @@ class KafkaConfig:
             # Producer settings
             producer_acks=parse_str("KAFKA_PRODUCER_ACKS", "all"),
             producer_compression_type=parse_str("KAFKA_PRODUCER_COMPRESSION_TYPE", None),
-            producer_batch_size=parse_int("KAFKA_PRODUCER_BATCH_SIZE", 16384),
+            producer_max_batch_size=parse_int("KAFKA_PRODUCER_MAX_BATCH_SIZE", 16384),
             producer_linger_ms=parse_int("KAFKA_PRODUCER_LINGER_MS", 0),
             producer_enable_idempotence=parse_bool("KAFKA_PRODUCER_ENABLE_IDEMPOTENCE", False),
             

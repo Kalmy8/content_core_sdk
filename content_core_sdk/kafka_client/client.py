@@ -66,7 +66,7 @@ class _KafkaService:
             producer_config = {
                 "bootstrap_servers": self.config.bootstrap_servers,
                 "acks": self.config.producer_acks,
-                "batch_size": self.config.producer_batch_size,
+                "max_batch_size": self.config.producer_max_batch_size,
                 "linger_ms": self.config.producer_linger_ms,
                 "enable_idempotence": self.config.producer_enable_idempotence,
                 "request_timeout_ms": self.config.request_timeout_ms,
