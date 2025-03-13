@@ -7,7 +7,7 @@ class ContentRequestsPicture(ISerializable):
     correlation_id: str | None = Field(None, description="Unique ID for request-response correlation", example="123e4567-e89b-12d3-a456-426614174000")
     user_id: str | None = Field(None, description="ID of the requesting user", example="user_12345")
     character_name: str | None = Field(None, description="Optional name of a character to incorporate into the image generation", example="Harry Potter")
-    request_text: str = Field(..., description="The main text prompt describing the image to be generated", example="A magical castle under a starry night sky")
+    request_text: str = Field(..., description="Text prompt for image generation (max 100 tokens)", max_length=100, example="A magical castle under a starry night sky")
     height: int = Field(1024, description="Height of the generated image in pixels (fixed at 1024)", ge=1024, le=1024, example=1024)
     width: int = Field(1024, description="Width of the generated image in pixels (fixed at 1024)", ge=1024, le=1024, example=1024)
     num_inference_steps: int = Field(50, description="Number of denoising steps in the image generation process. More steps lead to better quality but longer generation time.", ge=1, le=100, example=50)
