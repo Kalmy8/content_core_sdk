@@ -1,8 +1,6 @@
 from functools import lru_cache
 from typing import AsyncGenerator
-
-from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
-
+from aiokafka import AIOKafkaProducer, AIOKafkaConsumer, ConsumerRecord
 from content_core_sdk.kafka_client.config import KafkaConfig
 
 
@@ -12,32 +10,42 @@ class _KafkaService:
         self._producer: AIOKafkaProducer | None = None
         self._consumers: dict[tuple[str, str], AIOKafkaConsumer] = {}
 
-    async def _start_consumer(self, topic: str, group_id: str):
+    async def _start_consumer(self, topic: str, group_id: str) -> None:
         """
         Lazily initialize and start the Kafka consumer.
+        
+        Args:
+            topic: The Kafka topic to consume
+            group_id: The consumer group ID
         """
+        # Use configuration directly from KafkaConfig
         consumer = AIOKafkaConsumer(
             topic,
-            bootstrap_servers=self.config.bootstrap_servers,
             group_id=group_id,
-            enable_auto_commit=True,
-            auto_offset_reset="earliest",
+            bootstrap_servers=self.config.bootstrap_servers,
+            enable_auto_commit=self.config.consumer_enable_auto_commit,
+            auto_offset_reset=self.config.consumer_auto_offset_reset,
+            max_poll_records=self.config.consumer_max_poll_records,
+            session_timeout_ms=self.config.consumer_session_timeout_ms,
+            heartbeat_interval_ms=self.config.consumer_heartbeat_interval_ms,
+            request_timeout_ms=self.config.request_timeout_ms,
+            retry_backoff_ms=self.config.retry_backoff_ms
         )
         self._consumers[(topic, group_id)] = consumer
         await consumer.start()
 
     async def consume_messages(
         self, topic: str, group_id: str = "default-group"
-    ) -> AsyncGenerator[bytes, None]:
+    ) -> AsyncGenerator[ConsumerRecord, None]:
         """
         Lazily initialize and consume messages from specified topic/group.
-        Usage:
-            async for msg in kafka_service.consume_messages("my-topic", "my-group"):
-                process(msg)
+        
+        Args:
+            topic: The Kafka topic to consume
+            group_id: The consumer group ID
         """
         consumer_key = (topic, group_id)
 
-        # Initialize consumer
         if consumer_key not in self._consumers:
             await self._start_consumer(topic, group_id)
 
@@ -49,12 +57,28 @@ class _KafkaService:
             await self._stop_consumer(consumer_key)
             raise RuntimeError(f"Consumer error: {e}") from e
 
-    async def _start_producer(self) -> None:
+    async def _start_producer(self):
         """
         Lazily initialize and start the Kafka producer.
         """
         if self._producer is None:
-            self._producer = AIOKafkaProducer(bootstrap_servers=self.config.bootstrap_servers)
+            # Build producer configuration from KafkaConfig
+            producer_config = {
+                "bootstrap_servers": self.config.bootstrap_servers,
+                "acks": self.config.producer_acks,
+                "batch_size": self.config.producer_batch_size,
+                "linger_ms": self.config.producer_linger_ms,
+                "enable_idempotence": self.config.producer_enable_idempotence,
+                "request_timeout_ms": self.config.request_timeout_ms,
+                "retry_backoff_ms": self.config.retry_backoff_ms
+            }
+            
+            # Only add compression if it's specified (not None)
+            if self.config.producer_compression_type:
+                producer_config["compression_type"] = self.config.producer_compression_type
+            
+            # Create and start producer
+            self._producer = AIOKafkaProducer(**producer_config)
             await self._producer.start()
 
     async def send_message(self, topic: str, message: bytes) -> None:
@@ -62,8 +86,8 @@ class _KafkaService:
         Sends a message to the specified Kafka topic.
 
         Args:
-            topic (str): The Kafka topic to publish to.
-            message (str): The message (as a string) to send.
+            topic: The Kafka topic to publish to
+            message: The message (as bytes) to send
         """
         if self._producer is None:
             await self._start_producer()
