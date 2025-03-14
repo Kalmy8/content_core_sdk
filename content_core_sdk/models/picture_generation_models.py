@@ -8,8 +8,8 @@ class ContentRequestsPicture(ISerializable):
     user_id: str | None = Field(None, description="ID of the requesting user", example="user_12345")
     character_name: str | None = Field(None, description="Optional name of a character to incorporate into the image generation", example="Harry Potter")
     request_text: str = Field(..., description="Text prompt for image generation (max 100 tokens)", max_length=100, example="A magical castle under a starry night sky")
-    height: int = Field(1024, description="Height of the generated image in pixels (more than 200, less than 1440)", ge =200, le=1440, example=1024)
-    width: int = Field(1024, description="Width of the generated image in pixels (more than 200, less than 2560)", ge=200, le=2560, example=1024)
+    height: int = Field(1024, description="Height of the generated image in pixels (must be divisible by 8, between 200-1440)", ge=200, le=1440, example=1024, multiple_of=8)
+    width: int = Field(1024, description="Width of the generated image in pixels (must be divisible by 8, between 200-2560)", ge=200, le=2560, example=1024, multiple_of=8)
     num_inference_steps: int = Field(50, description="Number of denoising steps in the image generation process. More steps lead to better quality but longer generation time.", ge=1, le=100, example=50)
     guidance_scale: int = Field(3, description="Scale factor determining how closely the image follows the text prompt", ge=1, le=100, example=7)
 
