@@ -1,4 +1,4 @@
-from content_core_sdk.models.base_model import ISerializable
+from content_core_sdk.kafka_client.models.base_model import ISerializable
 from pydantic import BaseModel
 
 

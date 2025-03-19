@@ -1,5 +1,5 @@
 from pydantic import Field
-from content_core_sdk.models.base_model import ISerializable
+from content_core_sdk.kafka_client.models.base_model import ISerializable
 
 class ContentRequestsPicture(ISerializable):
     service: str | None = Field(None, description="Name of the service", example="twitter_interface")
