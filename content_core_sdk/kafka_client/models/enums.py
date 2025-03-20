@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class KafkaTopics(str, Enum):
+class KafkaTopics(StrEnum):
     CONTENT_REQUESTS_TEXT = "CONTENT_REQUESTS_TEXT"
     CONTENT_RESPONSES_TEXT = "CONTENT_RESPONSES_TEXT"
     CONTENT_REQUESTS_JSON = "CONTENT_REQUESTS_JSON"
