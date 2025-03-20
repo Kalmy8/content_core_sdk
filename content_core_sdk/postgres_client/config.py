@@ -1,21 +1,24 @@
 from typing import Any
-from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class PostgresConfig(BaseSettings):
     """Configuration for PostgreSQL connection"""
-    host: str = Field(..., env="POSTGRES_HOST")
-    port: int = Field(5432, env="POSTGRES_PORT")
-    user: str = Field(..., env="POSTGRES_USER")
-    password: str = Field(..., env="POSTGRES_PASSWORD")
-    database: str = Field(..., env="POSTGRES_DB")
-    min_connections: int = Field(1, env="POSTGRES_MIN_CONNECTIONS")
-    max_connections: int = Field(10, env="POSTGRES_MAX_CONNECTIONS")
-    connection_timeout: float = Field(60.0, env="POSTGRES_CONNECTION_TIMEOUT")
-    command_timeout: float = Field(30.0, env="POSTGRES_COMMAND_TIMEOUT")
+    model_config = SettingsConfigDict(
+        env_prefix="POSTGRES_",
+        env_file=None,  # No default .env file, only use environment variables
+        env_nested_delimiter="__",
+        extra='ignore',
+        case_sensitive=False
+    )
     
-    @classmethod
-    def from_env(cls) -> "PostgresConfig":
-        """Creates a PostgresConfig instance from environment variables"""
-        return cls() 
+    host: str
+    port: int = 5432
+    user: str
+    password: str
+    database: str
+    min_connections: int = 1
+    max_connections: int = 10
+    connection_timeout: float = 60.0
+    command_timeout: float = 30.0
+    
