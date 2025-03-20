@@ -18,18 +18,31 @@ class _KafkaService:
             topic: The Kafka topic to consume
             group_id: The consumer group ID
         """
-        # Use configuration directly from KafkaConfig
+        # Create consumer configuration
+        consumer_config = {
+            "bootstrap_servers": self.config.bootstrap_servers,
+            "enable_auto_commit": self.config.consumer_enable_auto_commit,
+            "auto_offset_reset": self.config.consumer_auto_offset_reset,
+            "max_poll_records": self.config.consumer_max_poll_records,
+            "session_timeout_ms": self.config.consumer_session_timeout_ms,
+            "heartbeat_interval_ms": self.config.consumer_heartbeat_interval_ms,
+            "request_timeout_ms": self.config.request_timeout_ms,
+            "retry_backoff_ms": self.config.retry_backoff_ms,
+            "security_protocol": self.config.security_protocol,
+        }
+        
+        # Add SASL settings if needed
+        if self.config.sasl_mechanism:
+            consumer_config["sasl_mechanism"] = self.config.sasl_mechanism
+        if self.config.sasl_username and self.config.sasl_password:
+            consumer_config["sasl_plain_username"] = self.config.sasl_username
+            consumer_config["sasl_plain_password"] = self.config.sasl_password
+            
+        # Create and start consumer
         consumer = AIOKafkaConsumer(
             topic,
             group_id=group_id,
-            bootstrap_servers=self.config.bootstrap_servers,
-            enable_auto_commit=self.config.consumer_enable_auto_commit,
-            auto_offset_reset=self.config.consumer_auto_offset_reset,
-            max_poll_records=self.config.consumer_max_poll_records,
-            session_timeout_ms=self.config.consumer_session_timeout_ms,
-            heartbeat_interval_ms=self.config.consumer_heartbeat_interval_ms,
-            request_timeout_ms=self.config.request_timeout_ms,
-            retry_backoff_ms=self.config.retry_backoff_ms
+            **consumer_config
         )
         self._consumers[(topic, group_id)] = consumer
         await consumer.start()
@@ -70,12 +83,20 @@ class _KafkaService:
                 "linger_ms": self.config.producer_linger_ms,
                 "enable_idempotence": self.config.producer_enable_idempotence,
                 "request_timeout_ms": self.config.request_timeout_ms,
-                "retry_backoff_ms": self.config.retry_backoff_ms
+                "retry_backoff_ms": self.config.retry_backoff_ms,
+                "security_protocol": self.config.security_protocol,
             }
             
             # Only add compression if it's specified (not None)
             if self.config.producer_compression_type:
                 producer_config["compression_type"] = self.config.producer_compression_type
+                
+            # Add SASL settings if needed
+            if self.config.sasl_mechanism:
+                producer_config["sasl_mechanism"] = self.config.sasl_mechanism
+            if self.config.sasl_username and self.config.sasl_password:
+                producer_config["sasl_plain_username"] = self.config.sasl_username
+                producer_config["sasl_plain_password"] = self.config.sasl_password
             
             # Create and start producer
             self._producer = AIOKafkaProducer(**producer_config)
@@ -122,5 +143,5 @@ def get_kafka_service() -> _KafkaService:
     """
     Returns a singleton instance of _KafkaService.
     """
-    config = KafkaConfig.from_env()
+    config = KafkaConfig()
     return _KafkaService(config=config)

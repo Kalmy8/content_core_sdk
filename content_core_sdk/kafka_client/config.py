@@ -11,6 +11,12 @@ class KafkaConfig(BaseSettings):
     # Connection settings
     bootstrap_servers: str = Field(..., env="KAFKA_BOOTSTRAP_SERVERS")
     
+    # Security settings
+    security_protocol: str = Field("PLAINTEXT", env="KAFKA_SECURITY_PROTOCOL")
+    sasl_mechanism: Optional[str] = Field(None, env="KAFKA_SASL_MECHANISM")
+    sasl_username: Optional[str] = Field(None, env="KAFKA_USERNAME")
+    sasl_password: Optional[str] = Field(None, env="KAFKA_PASSWORD")
+    
     # Consumer settings
     consumer_auto_offset_reset: str = Field("earliest", env="KAFKA_CONSUMER_AUTO_OFFSET_RESET")
     consumer_enable_auto_commit: bool = Field(True, env="KAFKA_CONSUMER_ENABLE_AUTO_COMMIT")
@@ -29,12 +35,4 @@ class KafkaConfig(BaseSettings):
     request_timeout_ms: int = Field(40000, env="KAFKA_REQUEST_TIMEOUT_MS")
     retry_backoff_ms: int = Field(100, env="KAFKA_RETRY_BACKOFF_MS")
 
-    @classmethod
-    def from_env(cls) -> "KafkaConfig":
-        """
-        Create a KafkaConfig from environment variables.
-        
-        Automatically reads from environment variables based on the Field definitions.
-        """
-        return cls()
 
