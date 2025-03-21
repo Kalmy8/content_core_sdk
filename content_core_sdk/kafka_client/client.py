@@ -1,14 +1,19 @@
 from functools import lru_cache
 from typing import AsyncGenerator
+import logging
 from aiokafka import AIOKafkaProducer, AIOKafkaConsumer, ConsumerRecord
 from content_core_sdk.kafka_client.config import KafkaConfig
 
+logger = logging.getLogger(__name__)
 
 class _KafkaService:
     def __init__(self, config: KafkaConfig) -> None:
         self.config = config
         self._producer: AIOKafkaProducer | None = None
         self._consumers: dict[tuple[str, str], AIOKafkaConsumer] = {}
+        logger.info(f"Initialized Kafka service with config: bootstrap_servers={config.bootstrap_servers}, "
+                   f"security_protocol={config.security_protocol}, sasl_mechanism={config.sasl_mechanism}, "
+                   f"sasl_username={config.sasl_username is not None}")
 
     async def _start_consumer(self, topic: str, group_id: str) -> None:
         """
@@ -32,15 +37,23 @@ class _KafkaService:
 
         # Add SASL authentication if required
         if self.config.security_protocol.startswith("SASL"):
+            logger.info(f"Adding SASL config with mechanism {self.config.sasl_mechanism}, "
+                       f"username={self.config.sasl_username is not None}")
             consumer_config.update({
                 "sasl_mechanism": self.config.sasl_mechanism,
-                "sasl_plain_username": self.config.sasl_username,
-                "sasl_plain_password": self.config.sasl_password,
+                "sasl_plain_username": self.config.sasl_username or "",
+                "sasl_plain_password": self.config.sasl_password or "",
             })
 
-        consumer = AIOKafkaConsumer(topic, group_id=group_id, **consumer_config)
-        self._consumers[(topic, group_id)] = consumer
-        await consumer.start()
+        try:
+            logger.info(f"Starting consumer for topic {topic} with group {group_id}")
+            consumer = AIOKafkaConsumer(topic, group_id=group_id, **consumer_config)
+            self._consumers[(topic, group_id)] = consumer
+            await consumer.start()
+            logger.info(f"Successfully started consumer for topic {topic}")
+        except Exception as e:
+            logger.error(f"Failed to start consumer: {str(e)}", exc_info=True)
+            raise
 
     async def consume_messages(
         self, topic: str, group_id: str = "default-group"
@@ -86,14 +99,22 @@ class _KafkaService:
 
             # Add SASL authentication if required
             if self.config.security_protocol.startswith("SASL"):
+                logger.info(f"Adding SASL config to producer with mechanism {self.config.sasl_mechanism}, "
+                           f"username={self.config.sasl_username is not None}")
                 producer_config.update({
                     "sasl_mechanism": self.config.sasl_mechanism,
-                    "sasl_plain_username": self.config.sasl_username,
-                    "sasl_plain_password": self.config.sasl_password,
+                    "sasl_plain_username": self.config.sasl_username or "",
+                    "sasl_plain_password": self.config.sasl_password or "",
                 })
 
-            self._producer = AIOKafkaProducer(**producer_config)
-            await self._producer.start()
+            try:
+                logger.info("Starting Kafka producer")
+                self._producer = AIOKafkaProducer(**producer_config)
+                await self._producer.start()
+                logger.info("Successfully started Kafka producer")
+            except Exception as e:
+                logger.error(f"Failed to start producer: {str(e)}", exc_info=True)
+                raise
 
     async def send_message(self, topic: str, message: bytes) -> None:
         """

@@ -1,5 +1,6 @@
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 
 
 class KafkaConfig(BaseSettings):
@@ -21,15 +22,15 @@ class KafkaConfig(BaseSettings):
     # Security settings
     security_protocol: str = "PLAINTEXT"  # "PLAINTEXT", "SASL_PLAINTEXT", "SSL", "SASL_SSL"
     sasl_mechanism: Optional[str] = None  # "SCRAM-SHA-512", "PLAIN", etc.
-    sasl_username: Optional[str] = None
-    sasl_password: Optional[str] = None
+    sasl_username: Optional[str] = Field(None, validation_alias="USERNAME")
+    sasl_password: Optional[str] = Field(None, validation_alias="PASSWORD")
     
     # Consumer settings
     consumer_auto_offset_reset: str = "earliest"
     consumer_enable_auto_commit: bool = True
     consumer_max_poll_records: int = 500
-    consumer_session_timeout_ms: int = 10000
-    consumer_heartbeat_interval_ms: int = 3000
+    consumer_session_timeout_ms: int = 30000
+    consumer_heartbeat_interval_ms: int = 10000
     
     # Producer settings
     producer_acks: str = "all"
