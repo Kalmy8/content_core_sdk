@@ -22,8 +22,8 @@ class KafkaConfig(BaseSettings):
     # Security settings
     security_protocol: str = "PLAINTEXT"  # "PLAINTEXT", "SASL_PLAINTEXT", "SSL", "SASL_SSL"
     sasl_mechanism: Optional[str] = None  # "SCRAM-SHA-512", "PLAIN", etc.
-    sasl_username: Optional[str] = Field(None, validation_alias="USERNAME")
-    sasl_password: Optional[str] = Field(None, validation_alias="PASSWORD")
+    sasl_username: Optional[str] = Field(None, validation_alias="KAFKA_USERNAME")
+    sasl_password: Optional[str] = Field(None, validation_alias="KAFKA_PASSWORD")
     
     # Consumer settings
     consumer_auto_offset_reset: str = "earliest"
