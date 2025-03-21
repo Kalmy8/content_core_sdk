@@ -25,8 +25,7 @@ class Character:
     agent_name: Optional[str] = None
     appearance: Optional[str] = None
     age: Optional[str] = None
-    origin: Optional[str] = None
-    persona_description: Optional[str] = None
+    biography: Optional[str] = None
     moral_alignment: Optional[str] = None
     actions: Optional[Dict[str, List[str]]] = None
     beliefs_and_knowledge: Optional[Dict[str, List[str]]] = None
