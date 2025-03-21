@@ -13,12 +13,11 @@ class _KafkaService:
     async def _start_consumer(self, topic: str, group_id: str) -> None:
         """
         Lazily initialize and start the Kafka consumer.
-        
+
         Args:
             topic: The Kafka topic to consume
             group_id: The consumer group ID
         """
-        # Create consumer configuration
         consumer_config = {
             "bootstrap_servers": self.config.bootstrap_servers,
             "enable_auto_commit": self.config.consumer_enable_auto_commit,
@@ -28,22 +27,18 @@ class _KafkaService:
             "heartbeat_interval_ms": self.config.consumer_heartbeat_interval_ms,
             "request_timeout_ms": self.config.request_timeout_ms,
             "retry_backoff_ms": self.config.retry_backoff_ms,
-            "security_protocol": self.config.security_protocol,
+            "security_protocol": self.config.security_protocol
         }
-        
-        # Add SASL settings if needed
-        if self.config.sasl_mechanism:
-            consumer_config["sasl_mechanism"] = self.config.sasl_mechanism
-        if self.config.sasl_username and self.config.sasl_password:
-            consumer_config["sasl_plain_username"] = self.config.sasl_username
-            consumer_config["sasl_plain_password"] = self.config.sasl_password
-            
-        # Create and start consumer
-        consumer = AIOKafkaConsumer(
-            topic,
-            group_id=group_id,
-            **consumer_config
-        )
+
+        # Add SASL authentication if required
+        if self.config.security_protocol.startswith("SASL"):
+            consumer_config.update({
+                "sasl_mechanism": self.config.sasl_mechanism,
+                "sasl_plain_username": self.config.sasl_username,
+                "sasl_plain_password": self.config.sasl_password,
+            })
+
+        consumer = AIOKafkaConsumer(topic, group_id=group_id, **consumer_config)
         self._consumers[(topic, group_id)] = consumer
         await consumer.start()
 
@@ -69,13 +64,12 @@ class _KafkaService:
         except Exception as e:
             await self._stop_consumer(consumer_key)
             raise RuntimeError(f"Consumer error: {e}") from e
-
+    
     async def _start_producer(self):
         """
         Lazily initialize and start the Kafka producer.
         """
         if self._producer is None:
-            # Build producer configuration from KafkaConfig
             producer_config = {
                 "bootstrap_servers": self.config.bootstrap_servers,
                 "acks": self.config.producer_acks,
@@ -84,21 +78,20 @@ class _KafkaService:
                 "enable_idempotence": self.config.producer_enable_idempotence,
                 "request_timeout_ms": self.config.request_timeout_ms,
                 "retry_backoff_ms": self.config.retry_backoff_ms,
-                "security_protocol": self.config.security_protocol,
+                "security_protocol": self.config.security_protocol
             }
-            
-            # Only add compression if it's specified (not None)
+
             if self.config.producer_compression_type:
                 producer_config["compression_type"] = self.config.producer_compression_type
-                
-            # Add SASL settings if needed
-            if self.config.sasl_mechanism:
-                producer_config["sasl_mechanism"] = self.config.sasl_mechanism
-            if self.config.sasl_username and self.config.sasl_password:
-                producer_config["sasl_plain_username"] = self.config.sasl_username
-                producer_config["sasl_plain_password"] = self.config.sasl_password
-            
-            # Create and start producer
+
+            # Add SASL authentication if required
+            if self.config.security_protocol.startswith("SASL"):
+                producer_config.update({
+                    "sasl_mechanism": self.config.sasl_mechanism,
+                    "sasl_plain_username": self.config.sasl_username,
+                    "sasl_plain_password": self.config.sasl_password,
+                })
+
             self._producer = AIOKafkaProducer(**producer_config)
             await self._producer.start()
 

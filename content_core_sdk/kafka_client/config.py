@@ -9,6 +9,7 @@ class KafkaConfig(BaseSettings):
     """
     model_config = SettingsConfigDict(
         env_prefix="KAFKA_",
+        env_file=None,  # No .env file, only use environment variables
         env_nested_delimiter="__",
         extra='ignore',
         case_sensitive=False
@@ -18,8 +19,8 @@ class KafkaConfig(BaseSettings):
     bootstrap_servers: str
     
     # Security settings
-    security_protocol: str = "PLAINTEXT"
-    sasl_mechanism: Optional[str] = None
+    security_protocol: str = "PLAINTEXT"  # "PLAINTEXT", "SASL_PLAINTEXT", "SSL", "SASL_SSL"
+    sasl_mechanism: Optional[str] = None  # "SCRAM-SHA-512", "PLAIN", etc.
     sasl_username: Optional[str] = None
     sasl_password: Optional[str] = None
     
