@@ -1,4 +1,3 @@
-from typing import Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,9 +15,12 @@ class PostgresConfig(BaseSettings):
     port: int = 5432
     user: str
     password: str
-    database: str
+    database_name: str
     min_connections: int = 1
     max_connections: int = 10
     connection_timeout: float = 60.0
     command_timeout: float = 30.0
-    
+
+    def get_db_url(self):
+        return (f"postgresql+asyncpg://{self.user}:{self.password}@"
+                f"{self.host}:{self.port}/{self.database_name}")

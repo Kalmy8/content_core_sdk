@@ -1,33 +1,35 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-from uuid import UUID
 
+from pydantic import BaseModel
+from content_core_sdk.postgres_client.models.base_model import Base
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import JSON, String, UUID
 
-@dataclass
-class Character:
+class Agent(Base):
     """Character model representing an agent with all its attributes"""
-    name: str
-    description: str
-    user_id: int
-    uuid: UUID
-    ticker: str
-    image_hash: str
-    solana_address: Optional[str] = None
-    base_address: str = ""
-    created_at: datetime = None
-    
-    # Fields from personality JSON
-    llm_settings: Optional[Dict[str, Any]] = None
-    available_tools: Optional[List[str]] = None
-    
-    # Fields from description in personality JSON
-    agent_name: Optional[str] = None
-    appearance: Optional[str] = None
-    age: Optional[str] = None
-    biography: Optional[str] = None
-    moral_alignment: Optional[str] = None
-    actions: Optional[Dict[str, List[str]]] = None
-    beliefs_and_knowledge: Optional[Dict[str, List[str]]] = None
-    personality_adjectives: Optional[List[str]] = None
-    writing_style: Optional[Dict[str, Any]] = None 
+    __tablename__ = "agent"
+
+    user_id: Mapped[int] 
+    uuid: Mapped[str] = mapped_column(UUID, 
+                                      nullable=False,
+                                      unique=True,
+                                      server_default="uuid_generate_v4()"
+                                      )
+    name: Mapped[str] = mapped_column(String(255), 
+                                      nullable=False,
+                                      unique=True
+                                      )
+    description: Mapped[dict] = mapped_column(JSON, nullable=False)
+    image_hash: Mapped[str] = mapped_column(String(255), 
+                                            unique=True,
+                                            nullable=False)
+    solana_address: Mapped[str | None] 
+    base_address: Mapped[str | None] 
+    ticker: Mapped[str] = mapped_column(String(255), 
+                                        nullable=False,
+                                        unique=True
+                                        )
+   
+

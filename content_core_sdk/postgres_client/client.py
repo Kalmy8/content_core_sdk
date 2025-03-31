@@ -1,102 +1,130 @@
+"""
+PostgreSQL client interface providing access to database entities.
+"""
+from __future__ import annotations
 from functools import lru_cache
-from typing import Any, AsyncGenerator
-import asyncpg
-from asyncpg import Pool, Connection
+from typing import List, Callable, AsyncIterator
+from contextlib import asynccontextmanager
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from content_core_sdk.postgres_client.database import async_session_maker
 from content_core_sdk.postgres_client.config import PostgresConfig
+from content_core_sdk.postgres_client.models.character_model import Agent
+from content_core_sdk.common.result import Result
 
 
-class PostgresService:
-    def __init__(self, config: PostgresConfig) -> None:
+class PostgresClient:
+    """
+    Client for PostgreSQL database operations.
+    Provides a simplified interface for common database operations.
+    """
+    
+    def __init__(self, config: PostgresConfig, session_factory: Callable[[], AsyncSession]) -> None:
+        """
+        Initialize the PostgreSQL client.
+        
+        Args:
+            config: PostgreSQL connection configuration
+            session_factory: Factory function that returns a new database session
+        """
         self.config = config
-        self._pool: Pool | None = None
-
-    async def _get_pool(self) -> Pool:
+        self.session_factory = session_factory
+    
+    @asynccontextmanager
+    async def session(self) -> AsyncIterator[AsyncSession]:
         """
-        Lazily initialize the connection pool.
+        Context manager for database sessions with proper error handling.
         
-        Returns:
-            Connection pool instance
-        """
-        if self._pool is None:
-            self._pool = await asyncpg.create_pool(
-                host=self.config.host,
-                port=self.config.port,
-                user=self.config.user,
-                password=self.config.password,
-                database=self.config.database,
-                min_size=self.config.min_connections,
-                max_size=self.config.max_connections,
-                timeout=self.config.connection_timeout,
-                command_timeout=self.config.command_timeout
-            )
-        return self._pool
-
-    async def execute(self, query: str, *args: Any) -> str:
-        """
-        Execute a SQL query that doesn't return rows.
+        Automatically handles rollback on error and ensures session is closed.
         
-        Args:
-            query: SQL query to execute
-            args: Query parameters
-            
-        Returns:
-            Command completion tag
+        Yields:
+            AsyncSession: Database session
         """
-        pool = await self._get_pool()
-        async with pool.acquire() as conn:
-            return await conn.execute(query, *args)
-
-    async def fetch(self, query: str, *args: Any) -> list[asyncpg.Record]:
+        session = self.session_factory()
+        try:
+            yield session
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            raise e
+        finally:
+            await session.close()
+    
+    async def get_agent_by_name(self, name: str) -> Result[Agent | None]:
         """
-        Execute a query and return all results as a list.
+        Get an agent by its unique name.
         
         Args:
-            query: SQL query to execute
-            args: Query parameters
+            name: The unique name of the agent
             
         Returns:
-            List of records
+            Result containing the agent if found, None if not found, or an error
         """
-        pool = await self._get_pool()
-        async with pool.acquire() as conn:
-            return await conn.fetch(query, *args)
-
-    async def fetchrow(self, query: str, *args: Any) -> asyncpg.Record | None:
+        try:
+            async with self.session() as session:
+                stmt = select(Agent).where(Agent.name == name)
+                result = await session.execute(stmt)
+                agent = result.scalars().first()
+                return Result.success(agent)
+        except Exception as e:
+            return Result.error(f"Failed to get agent by name: {str(e)}", e)
+    
+    async def get_agent_by_ticker(self, ticker: str) -> Result[Agent | None]:
         """
-        Execute a query and return the first row.
+        Get an agent by its unique ticker.
         
         Args:
-            query: SQL query to execute
-            args: Query parameters
+            ticker: The unique ticker of the agent
             
         Returns:
-            First record or None if no rows returned
+            Result containing the agent if found, None if not found, or an error
         """
-        pool = await self._get_pool()
-        async with pool.acquire() as conn:
-            return await conn.fetchrow(query, *args)
-
-    async def transaction(self) -> Connection:
+        try:
+            async with self.session() as session:
+                stmt = select(Agent).where(Agent.ticker == ticker)
+                result = await session.execute(stmt)
+                agent = result.scalars().first()
+                return Result.success(agent)
+        except Exception as e:
+            return Result.error(f"Failed to get agent by ticker: {str(e)}", e)
+    
+    async def get_all_agents(self, limit: int = 100, offset: int = 0) -> Result[List[Agent] | None]:
         """
-        Get a connection with a transaction started.
+        Get all agents with pagination.
         
+        Args:
+            limit: Maximum number of agents to return
+            offset: Number of agents to skip
+            
         Returns:
-            Database connection with active transaction
+            Result containing a list of agents or an error
         """
-        pool = await self._get_pool()
-        return await pool.acquire()
-
-    async def close(self) -> None:
-        """Cleanup all resources"""
-        if self._pool is not None:
-            await self._pool.close()
-            self._pool = None
-
+        try:
+            async with await self.get_session() as session:
+                stmt = select(Agent).limit(limit).offset(offset)
+                result = await session.execute(stmt)
+                agents = result.scalars().all()
+                return Result.success(list(agents))
+        except Exception as e:
+            return Result.error(f"Failed to get all agents: {str(e)}", e)
+    
 
 @lru_cache(maxsize=1)
-def get_postgres_service() -> PostgresService:
+def get_postgres_client() -> Result[PostgresClient]:
     """
-    Returns a singleton instance of PostgresService.
+    Get a singleton instance of the PostgreSQL client.
+    This function is cached to return the same instance for multiple calls.
+    
+    Returns:
+        Result containing either the PostgreSQL client or an error
     """
-    config = PostgresConfig.from_env()
-    return PostgresService(config=config) 
+    try:
+        config = PostgresConfig()
+        return Result.success(PostgresClient(
+            config=config,
+            session_factory=async_session_maker
+        ))
+    except Exception as e:
+        return Result.error(f"Failed to initialize PostgreSQL client: {str(e)}", e) 
